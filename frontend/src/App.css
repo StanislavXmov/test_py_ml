@@ -1,0 +1,94 @@
+.app {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+}
+
+.subtitle {
+  margin: 0 0 1.5rem;
+  color: #9aa7b5;
+  font-size: 0.95rem;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  width: min(100%, 300px);
+  margin: 0 auto 1.5rem;
+}
+
+.cell {
+  aspect-ratio: 1;
+  border: 2px solid #2a3441;
+  border-radius: 12px;
+  background: #1a2332;
+  color: #f5f8fc;
+  font-size: 2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.cell:hover:not(:disabled) {
+  background: #243044;
+  border-color: #4a90d9;
+}
+
+.cell:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.cell:disabled {
+  cursor: default;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.hint {
+  margin: 0;
+  color: #9aa7b5;
+}
+
+.result {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #7dd3fc;
+}
+
+.status {
+  margin: 0;
+  color: #9aa7b5;
+}
+
+.status.error {
+  color: #fca5a5;
+}
+
+.reset {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: white;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.reset:hover {
+  background: #1d4ed8;
+}
