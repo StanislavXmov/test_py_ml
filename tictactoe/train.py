@@ -1,4 +1,6 @@
+import argparse
 import random
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -42,15 +44,21 @@ def encode(board: list[int], player: int):
     return torch.tensor([v * player for v in board], dtype=torch.float32)
 
 
-def choose_move(model: QNet, board: list[int], player: int, eps: float):
+def choose_move(
+    model: QNet,
+    board: list[int],
+    player: int,
+    eps: float,
+    device: torch.device,
+):
     moves = available_moves(board)
 
     if random.random() < eps:
         return random.choice(moves)
 
     with torch.no_grad():
-        x = encode(board, player).unsqueeze(0)
-        q = model(x)[0]
+        x = encode(board, player).unsqueeze(0).to(device)
+        q = model(x)[0].cpu()
 
     for i in range(9):
         if board[i] != 0:
@@ -59,9 +67,18 @@ def choose_move(model: QNet, board: list[int], player: int, eps: float):
     return int(torch.argmax(q).item())
 
 
-def train():
-    model = QNet()
-    target_model = QNet()
+def resolve_device(device_name: str | None) -> torch.device:
+    if device_name is None:
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(device_name)
+
+
+def train(device_name: str | None = None):
+    device = resolve_device(device_name)
+    print(f"Using {device}")
+
+    model = QNet().to(device)
+    target_model = QNet().to(device)
     target_model.load_state_dict(model.state_dict())
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
@@ -84,7 +101,7 @@ def train():
 
         while True:
             state = board.copy()
-            move = choose_move(model, board, player, epsilon)
+            move = choose_move(model, board, player, epsilon, device)
 
             board[move] = player
             result = winner(board)
@@ -114,15 +131,17 @@ def train():
 
                 states_tensor = torch.stack(
                     [encode(s, p) for s, p in zip(states, players)]
-                )
+                ).to(device)
 
                 next_states_tensor = torch.stack(
                     [encode(s, -p) for s, p in zip(next_states, players)]
-                )
+                ).to(device)
 
-                moves_tensor = torch.tensor(moves, dtype=torch.long)
-                rewards_tensor = torch.tensor(rewards, dtype=torch.float32)
-                dones_tensor = torch.tensor(dones, dtype=torch.bool)
+                moves_tensor = torch.tensor(moves, dtype=torch.long, device=device)
+                rewards_tensor = torch.tensor(
+                    rewards, dtype=torch.float32, device=device
+                )
+                dones_tensor = torch.tensor(dones, dtype=torch.bool, device=device)
 
                 q_values = model(states_tensor)
                 q_selected = q_values.gather(1, moves_tensor.unsqueeze(1)).squeeze(1)
@@ -159,4 +178,11 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description="Train tictactoe DQN")
+    parser.add_argument(
+        "--device",
+        default=None,
+        help="PyTorch device (default: cuda if available, else cpu)",
+    )
+    args = parser.parse_args()
+    train(device_name=args.device)
