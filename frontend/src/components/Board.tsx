@@ -1,5 +1,5 @@
 import type { Board as BoardState } from "../game/board";
-import { cellLabel } from "../game/board";
+import { AI, cellLabel, HUMAN } from "../game/board";
 
 type BoardProps = {
   board: BoardState;
@@ -14,7 +14,13 @@ export function Board({ board, disabled, onCellClick }: BoardProps) {
         <button
           key={index}
           type="button"
-          className="cell"
+          className={[
+            "cell",
+            cell === HUMAN ? "cell--x" : "",
+            cell === AI ? "cell--o" : "",
+          ]
+            .filter(Boolean)
+            .join(" ")}
           disabled={disabled || cell !== 0}
           aria-label={`Клетка ${index}`}
           onClick={() => onCellClick(index)}

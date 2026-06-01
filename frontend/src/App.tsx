@@ -92,15 +92,19 @@ export default function App() {
       />
 
       <div className="info">
-        {result !== null ? (
-          <p className="result">{resultMessage(result)}</p>
-        ) : (
-          <p className="hint">Ваш ход — выберите клетку</p>
-        )}
-
-        {lastAiMove !== null && result === null && (
-          <p className="hint">ИИ ходит в клетку {lastAiMove}</p>
-        )}
+        <div className="status" aria-live="polite">
+          <p className="status__primary">
+            {result !== null
+              ? resultMessage(result)
+              : "Ваш ход — выберите клетку"}
+          </p>
+          <p
+            className="status__secondary"
+            hidden={result !== null || lastAiMove === null}
+          >
+            {lastAiMove !== null ? `ИИ ходит в клетку ${lastAiMove}` : ""}
+          </p>
+        </div>
 
         <button type="button" className="reset" onClick={resetGame}>
           Новая игра
