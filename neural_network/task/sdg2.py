@@ -238,5 +238,34 @@ for _ in range(N):
     optimizer.zero_grad()
 
 q = torch.mean((torch.sign(x @ w) == (y_train * 2 - 1)).float())
-print(q.item())
-print(w)
+
+mask_0 = y_train == 0
+mask_1 = y_train == 1
+
+plt.figure(figsize=(8, 6))
+plt.scatter(
+    x_train[mask_0, 0],
+    x_train[mask_0, 1],
+    c="tab:blue",
+    label="Класс 0",
+    alpha=0.7,
+)
+plt.scatter(
+    x_train[mask_1, 0],
+    x_train[mask_1, 1],
+    c="tab:orange",
+    label="Класс 1",
+    alpha=0.7,
+)
+
+with torch.no_grad():
+    x1_line = torch.linspace(x_train[:, 0].min(), x_train[:, 0].max(), 100)
+    x2_line = -(w[0] + w[1] * x1_line) / w[2]
+plt.plot(x1_line.numpy(), x2_line.numpy(), "k", label="Решающая граница")
+plt.xlabel("Признак 1")
+plt.ylabel("Признак 2")
+plt.title("Обучающая выборка")
+plt.legend()
+plt.grid(True, alpha=0.3)
+plt.tight_layout()
+plt.show()
