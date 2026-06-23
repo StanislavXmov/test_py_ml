@@ -43,3 +43,8 @@ class DigitsDataset(data.Dataset):
 to_tensor = tfs.ToImage()
 d_train = DigitsDataset(path="dataset", transform=to_tensor)
 train_data = data.DataLoader(d_train, batch_size=32, shuffle=True)
+
+# it = iter(train_data)
+# image, target = next(it)
+# print(image.shape)
+# print(target.shape)
