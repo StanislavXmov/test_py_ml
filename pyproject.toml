@@ -14,6 +14,7 @@ dependencies = [
     "torch==2.5.1+cu121",
     "torchaudio==2.5.1+cu121",
     "torchvision==0.20.1+cu121",
+    "tqdm>=4.68.3",
     "uvicorn[standard]>=0.34.0",
 ]
 
