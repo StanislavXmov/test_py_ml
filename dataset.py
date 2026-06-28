@@ -46,6 +46,11 @@ class DigitsDataset(data.Dataset):
         return image, t
 
 
+class RavelTransform(nn.Module):
+    def forward(self, item):
+        return item.ravel()
+
+
 class DigitNet(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim):
         super().__init__()
@@ -60,6 +65,8 @@ class DigitNet(nn.Module):
 
 
 model = DigitNet(input_dim=28 * 28, hidden_dim=32, output_dim=10)
+st = torch.load("model_dnn_1.tar", weights_only=True)
+model.load_state_dict(st)
 
 # to_tensor = tfs.ToImage()
 # d_train = DigitsDataset(path="dataset", transform=to_tensor)
@@ -68,7 +75,8 @@ transform = tfs.Compose(
         tfs.ToImage(),
         tfs.Grayscale(),
         tfs.ToDtype(torch.float32, scale=True),
-        tfs.Lambda(lambda _img: _img.ravel()),
+        # tfs.Lambda(lambda _img: _img.ravel()),
+        RavelTransform(),
     ]
 )
 d_train = ImageFolder(root="dataset/train", transform=transform)
@@ -82,9 +90,14 @@ train_data = data.DataLoader(d_train, batch_size=32, shuffle=True)
 
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 loss_func = nn.CrossEntropyLoss()
-epochs = 2
+epochs = 0
 model.train()
-for _ in range(epochs):
+
+best_loss = float("inf")
+
+for _e in range(epochs):
+    loss_mean = 0
+    lm_count = 0
     train_tqdm = tqdm(train_data, desc="Training", leave=True)
     for image, target in train_tqdm:
         predict = model(image)
@@ -93,6 +106,16 @@ for _ in range(epochs):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        lm_count += 1
+        loss_mean = 1 / lm_count * loss.item() + (1 - 1 / lm_count) * loss_mean
+        # loss_mean = loss_mean + (loss.item() - loss_mean) / lm_count
+
+    if best_loss > loss_mean * 1.1:
+        best_loss = loss_mean
+        state_dict = model.state_dict()
+        torch.save(state_dict, f"model_dnn_{_e}.tar")
+
 
 d_test = ImageFolder(root="dataset/test", transform=transform)
 test_data = data.DataLoader(d_test, batch_size=500, shuffle=False)
