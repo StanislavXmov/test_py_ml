@@ -64,6 +64,18 @@ class DigitNet(nn.Module):
         return x
 
 
+model_2 = nn.Sequential(
+    nn.Linear(28 * 28, 32),
+    nn.ReLU(),
+    nn.Linear(32, 10),
+)
+
+model_3 = nn.Sequential()
+model_3.add_module("layer1", nn.Linear(28 * 28, 32))
+model_3.add_module("relu1", nn.ReLU())
+model_3.add_module("layer2", nn.Linear(32, 10))
+
+
 model = DigitNet(input_dim=28 * 28, hidden_dim=32, output_dim=10)
 st = torch.load("model_dnn_1.tar", weights_only=True)
 model.load_state_dict(st)
