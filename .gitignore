@@ -9,3 +9,5 @@ wheels/
 # Virtual environments
 .venv
 /dataset
+/dataset_reg
+/images
