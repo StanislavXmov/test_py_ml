@@ -1,0 +1,120 @@
+import os
+import json
+from PIL import Image
+
+from tqdm import tqdm
+import torch
+import torch.utils.data as data
+import torch.nn as nn
+import torch.optim as optim
+import torchvision.transforms.v2 as tfs
+
+
+def resolve_device(device_name: str | None) -> torch.device:
+    if device_name is None:
+        return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    return torch.device(device_name)
+
+
+class XmovDataset(data.Dataset):
+    def __init__(self, path, train=True, transform=None):
+        self.path = os.path.join(path, "train" if train else "test")
+        self.transform = transform
+
+        with open(os.path.join(self.path, "format.json"), "r") as fp:
+            self.format = json.load(fp)
+
+        self.length = len(self.format)
+        self.files = tuple(self.format.keys())
+        self.targets = tuple(self.format.values())
+
+    def __getitem__(self, item):
+        path_file = os.path.join(self.path, self.files[item])
+        img = Image.open(path_file).convert("RGB")
+
+        if self.transform:
+            img = self.transform(img)
+
+        target = torch.tensor(self.targets[item], dtype=torch.float32) / 255.0
+        return img, target
+
+    def __len__(self):
+        return self.length
+
+
+transforms = tfs.Compose([tfs.ToImage(), tfs.ToDtype(torch.float32, scale=True)])
+d_train = XmovDataset("dataset_xmov", transform=transforms)
+device = resolve_device(None)
+use_cuda = torch.cuda.is_available()
+num_workers: int = 0
+train_data = data.DataLoader(
+    d_train, batch_size=32, shuffle=True, pin_memory=use_cuda, num_workers=num_workers
+)
+
+# 256 -> 128 -> 64 -> 32; 64*32*32 = 65536
+model = nn.Sequential(
+    nn.Conv2d(3, 32, 3, padding="same"),
+    nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Conv2d(32, 64, 3, padding="same"),
+    nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Conv2d(64, 64, 3, padding="same"),
+    nn.ReLU(),
+    nn.MaxPool2d(2),
+    nn.Flatten(),
+    nn.Linear(65536, 256),
+    nn.ReLU(),
+    nn.Linear(256, 2),
+)
+model.to(device)
+
+optimizer = optim.Adam(params=model.parameters(), lr=0.001, weight_decay=0.001)
+loss_function = nn.MSELoss()
+
+epochs = 15
+model.train()
+
+for _e in range(epochs):
+    loss_mean = 0
+    lm_count = 0
+
+    train_tqdm = tqdm(train_data, leave=True)
+    for x_train, y_train in train_tqdm:
+        x_train = x_train.to(device, non_blocking=True)
+        y_train = y_train.to(device, non_blocking=True)
+        predict = model(x_train)
+        loss = loss_function(predict, y_train)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        lm_count += 1
+        loss_mean = 1 / lm_count * loss.item() + (1 - 1 / lm_count) * loss_mean
+        train_tqdm.set_description(
+            f"Epoch [{_e+1}/{epochs}], loss_mean={loss_mean:.5f}"
+        )
+
+st = model.state_dict()
+torch.save(st, "model_xmov.tar")
+
+d_test = XmovDataset("dataset_xmov", train=False, transform=transforms)
+test_data = data.DataLoader(d_test, batch_size=50, shuffle=False)
+
+# тестирование обученной НС
+Q = 0
+count = 0
+model.eval()
+
+test_tqdm = tqdm(test_data, leave=True)
+for x_test, y_test in test_tqdm:
+    with torch.no_grad():
+        x_test = x_test.to(device, non_blocking=True)
+        y_test = y_test.to(device, non_blocking=True)
+        p = model(x_test)
+        Q += loss_function(p, y_test).item()
+        count += 1
+
+Q /= count
+print(Q)

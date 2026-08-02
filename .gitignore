@@ -10,4 +10,5 @@ wheels/
 .venv
 /dataset
 /dataset_reg
+/dataset_xmov
 /images
